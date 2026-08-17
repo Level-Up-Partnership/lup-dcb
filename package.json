@@ -1,0 +1,27 @@
+{
+  "name": "dcb",
+  "version": "1.0.0",
+  "description": "Summer Coding Bet 2026 · Ed's Project 2 · Client (Reviewer): Jess Nguyen",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy-commands": "node src/deploy-commands.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Level-Up-Partnership/lup-dcb.git"
+  },
+  "keywords": [],
+  "author": "Edwardson Pascual",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Level-Up-Partnership/lup-dcb/issues"
+  },
+  "homepage": "https://github.com/Level-Up-Partnership/lup-dcb#readme",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5"
+  }
+}
