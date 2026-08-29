@@ -10,7 +10,7 @@ const commands = require( './commands/definitions.js' );
  * Guild-scoped registration updates immediately, while global registration can take up to an hour to propagate.
  * DISCORD_GUILD_ID must be set in the .env file for this to work.
  * 
- * @returns - successful registration of commands with Discord's API, or an error if registration fails
+ * @returns - successful registration of commands with Discord's API, or an error if registration fails.
  * 
  */
 
@@ -40,7 +40,7 @@ async function deployCommands() {
                 process.env.DISCORD_CLIENT_ID,
                 process.env.DISCORD_GUILD_ID ),
 
-            { body: commandsJSON }
+            { body: commandsJSON } // The body of the request contains the commands in JSON format
 
         );
 

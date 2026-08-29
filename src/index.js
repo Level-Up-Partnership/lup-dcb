@@ -16,3 +16,54 @@ client.once( Events.ClientReady, ( readyClient ) => {
 } );
 
 client.login( process.env.DISCORD_TOKEN );
+
+
+
+const remind = require( './commands/remind.js' );
+const reminders = require( './commands/reminders.js' );
+const note = require( './commands/note.js' );
+const serverinfo = require( './commands/serverinfo.js' );
+const slowmode = require( './commands/slowmode.js' );
+
+const commands = new Map();
+
+[ remind, reminders, note, serverinfo, slowmode ].forEach( ( command ) => {
+
+    commands.set( command.name, command );
+
+} );
+
+
+// Listen for interactions
+client.on( Events.InteractionCreate, async ( interaction ) => {
+
+    // Guard against non-command interactions
+    if ( !interaction.isChatInputCommand() ) {
+
+        return;
+        
+    }
+
+    const command = commands.get( interaction.commandName );
+
+    // This guards against a user using a command that doesn't exist
+    if ( !command ) {
+
+        await interaction.reply( 'Command not found' );
+        return;
+
+    }
+
+    // Execute the command and catch any errors
+    try {
+
+        await command.execute( interaction );
+
+    } catch ( error ) { // If an error occurs, show it in the console and send a message to the user
+
+        console.error( error );
+        await interaction.reply( 'There was an error while executing this command!' );
+
+    }
+
+} );
