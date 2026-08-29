@@ -1,5 +1,6 @@
 const { Client, GatewayIntentBits, Events } = require( 'discord.js' );
 require( 'dotenv' ).config();
+require( './schema' ); // Load the database schema
 
 // Fail fast if the token is missing - a bot with no token can't do anything
 if ( !process.env.DISCORD_TOKEN ) {
