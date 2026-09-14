@@ -1,5 +1,6 @@
-const db = require( './database' );
+const db = require( './database' ); // Import the database connection
 
+// Create tables if they don't exist
 db.exec( `
     
     CREATE TABLE IF NOT EXISTS reminders (

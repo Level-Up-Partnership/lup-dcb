@@ -114,7 +114,6 @@ const slowmodeCommand = new SlashCommandBuilder()
 
     );
 
-
 module.exports = [
 
     remindCommand,
