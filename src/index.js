@@ -28,11 +28,11 @@ client.once( Events.ClientReady, ( readyClient ) => {
     console.log( `DCB Bot online as ${ readyClient.user.tag }` );
 
     // On bot startup, load all pending reminders from the database and schedule them
-    const pendingReminders = db.prepare( 'SELECT * FROM reminders WHERE fireAt > ?' ).all( Date.now() );
+    const pendingReminders = db.prepare( 'SELECT * FROM reminders' ).all();
 
     pendingReminders.forEach( ( reminder ) => {
 
-        scheduleReminder( reminder );
+        scheduleReminder( readyClient, reminder, db );
 
     } );
 
