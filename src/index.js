@@ -2,10 +2,21 @@ const { Client, GatewayIntentBits, Events } = require( 'discord.js' );
 require( 'dotenv' ).config();
 require( './schema' ); // Load the database schema
 
+const remind = require( './commands/remind.js' );
+const reminders = require( './commands/reminders.js' );
+const note = require( './commands/note.js' );
+const serverinfo = require( './commands/serverinfo.js' );
+const slowmode = require( './commands/slowmode.js' );
+
+const db = require( './database' ); // Import the database connection
+const { scheduleReminder } = require( './reminderScheduler' ); // Import the reminder scheduler utility
+
 // Fail fast if the token is missing - a bot with no token can't do anything
 if ( !process.env.DISCORD_TOKEN ) {
+
     console.error( 'Missing DISCORD_TOKEN in .env - see .env.example.' );
-    process.exit( 1 );
+    process.exit(1);
+
 }
 
 // Create client
@@ -13,18 +24,20 @@ if ( !process.env.DISCORD_TOKEN ) {
 const client = new Client( { intents: [ GatewayIntentBits.Guilds ] } );
 
 client.once( Events.ClientReady, ( readyClient ) => {
+
     console.log( `DCB Bot online as ${ readyClient.user.tag }` );
+
+    // On bot startup, load all pending reminders from the database and schedule them
+    const pendingReminders = db.prepare( 'SELECT * FROM reminders' ).all();
+
+    pendingReminders.forEach( ( reminder ) => {
+
+        scheduleReminder( readyClient, reminder, db );
+
+    } );
+
 } );
 
-client.login( process.env.DISCORD_TOKEN );
-
-
-
-const remind = require( './commands/remind.js' );
-const reminders = require( './commands/reminders.js' );
-const note = require( './commands/note.js' );
-const serverinfo = require( './commands/serverinfo.js' );
-const slowmode = require( './commands/slowmode.js' );
 
 const commands = new Map();
 
@@ -68,3 +81,5 @@ client.on( Events.InteractionCreate, async ( interaction ) => {
     }
 
 } );
+
+client.login( process.env.DISCORD_TOKEN );

@@ -1,3 +1,6 @@
+const db = require( '../database' ); // Import the database connection
+
+
 /**
  * 
  * This command is used to list the user's pending reminders.
@@ -8,9 +11,32 @@
 
 async function listReminders( interaction ) {
 
-    // List the user's pending reminders (stub implementation)
-    await interaction.reply( '(stub) Would list your pending reminders.' );
+    const pendingReminders = db.prepare(
+
+        'SELECT * FROM reminders WHERE userId = ? ORDER BY fireAt ASC'
+
+    ).all( interaction.user.id );
+
+    // Handle the case where the user has nothing pending
+    if ( pendingReminders.length === 0 ) {
+
+        await interaction.reply( { content: 'You have no pending reminders.', ephemeral: true } );
+        return;
+
+    }
+
+    const lines = pendingReminders.map( ( reminder ) =>
+
+        `#${ reminder.id } - ${ reminder.message } - <t:${ Math.floor( reminder.fireAt / 1000 ) }:R>`
+
+    );
+
+    await interaction.reply( { content: lines.join( '\n' ), ephemeral: true } );
 
 }
 
-module.exports = { name: 'reminders', execute: listReminders };
+module.exports = {
+    
+    name: 'reminders', execute: listReminders
+
+};
