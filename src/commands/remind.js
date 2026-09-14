@@ -1,3 +1,8 @@
+const db = require( '../database' ); // Import the database connection
+const { parseTimeToMinutes } = require( '../utils/timeParser' ); // Import the time parser utility
+const { scheduleReminder, cancelReminder } = require( '../reminderScheduler' ); // Import the reminder scheduler utility
+
+
 /**
  * 
  * This function handles the /remind set and /remind cancel commands.
@@ -17,9 +22,33 @@ async function execute( interaction ) {
         // Handle the 'set' subcommand
         case 'set': {
 
-            const time = interaction.options.getString( 'time' );
+            const timeString = interaction.options.getString( 'time' );
             const message = interaction.options.getString( 'message' );
-            await interaction.reply( `(stub) Would set a reminder for ${ message } in ${ time }.` );
+
+            const parsedTime = parseTimeToMinutes( timeString );
+
+            // Reject invalid time formats before touching the database
+            if ( !parsedTime.valid ) {
+
+                await interaction.reply( { content: parsedTime.error, ephemeral: true } );
+                return;
+
+            }
+
+            // fireAt is a STORED absolute timestamp, not the raw duration - survives restarts
+            const fireAt = Date.now() + ( parsedTime.minutes * 60 * 1000 ); // minutes to ms
+
+            const insertResult = db.prepare(
+
+                'INSERT INTO reminders ( userId, message, fireAt ) VALUES ( ?, ?, ? )'
+
+            ).run( interaction.user.id, message, fireAt );
+
+            const reminder = { id: insertResult.lastInsertRowid, userId: interaction.user.id, message, fireAt };
+
+            scheduleReminder( interaction.client, reminder, db );
+
+            await interaction.reply( `Reminder #${ reminder.id } set for <t:${ Math.floor( fireAt / 1000 ) }:R>.` );
             break;
 
         }
@@ -28,7 +57,25 @@ async function execute( interaction ) {
         case 'cancel': {
 
             const id = interaction.options.getInteger( 'id' );
-            await interaction.reply( `(stub) Would cancel reminder with ID ${ id }.` );
+
+            const reminder = db.prepare(
+
+                'SELECT * FROM reminders WHERE id = ? AND userId = ?'
+
+            ).get( id, interaction.user.id );
+
+            // Reject if no matching reminder belongs to this user
+            if ( !reminder ) {
+
+                await interaction.reply( { content: `No reminder with ID ${ id } found.`, ephemeral: true } );
+                return;
+
+            }
+
+            cancelReminder( id );
+            db.prepare( 'DELETE FROM reminders WHERE id = ?' ).run( id );
+
+            await interaction.reply( `Reminder #${ id } cancelled.` );
             break;
 
         }
@@ -41,4 +88,8 @@ async function execute( interaction ) {
 
 }
 
-module.exports = { name: 'remind', execute };
+module.exports = {
+    
+    name: 'remind', execute
+
+};
