@@ -27,12 +27,22 @@ client.once( Events.ClientReady, ( readyClient ) => {
 
     console.log( `DCB Bot online as ${ readyClient.user.tag }` );
 
-    // On bot startup, load all pending reminders from the database and schedule them
+    // Re-schedule every pending reminder now that the client is actually logged in.
+    // No fireAt filter here on purpose - overdue reminders still need to fire, not vanish silently.
     const pendingReminders = db.prepare( 'SELECT * FROM reminders' ).all();
 
-    pendingReminders.forEach( ( reminder ) => {
+    pendingReminders.forEach( ( reminder, index ) => {
 
-        scheduleReminder( readyClient, reminder, db );
+        /** Stagger reminders that are already overdue (fireAt in the past) so
+             multiple DMs to the same user on a single restart don't fire in the same instant. Discord's own API rejects opening a second DM channel to the same user too quickly (DiscordAPIError 40003), and this only affects the in-memory firing order for THIS run, the original fireAt stays untouched in the database, since that's the stored source of truth.
+          */
+        const isOverdue = reminder.fireAt <= Date.now();
+        const staggeredReminder = isOverdue
+
+            ? { ...reminder, fireAt: Date.now() + ( index * 1500 ) } // 1.5s apart, well outside Discord's DM-open rate limit window
+            : reminder;
+
+        scheduleReminder( readyClient, staggeredReminder, db );
 
     } );
 
