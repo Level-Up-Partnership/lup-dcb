@@ -6,10 +6,10 @@ const activeTimers = new Map(); // reminderId -> timeout handle, so /remind canc
  * Schedules a reminder to fire at its stored fireAt timestamp. Used both when a reminder
  * is freshly created and when reminders are reloaded from the DB on bot startup.
  *
- * @param { import( 'discord.js' ).Client } client - logged-in bot client, used to DM the user.
- * @param { { id: number, userId: string, message: string, fireAt: number } } reminder
- * @param { import( 'better-sqlite3' ).Database } db - shared connection, used to delete the row on fire.
- * @returns { void }
+ * @param { import( 'discord.js' ).Client } client - Logged-in bot client, used to DM the user.
+ * @param { { id: number, userId: string, message: string, fireAt: number } } reminder - Reminder object from the database.
+ * @param { import( 'better-sqlite3' ).Database } db - Shared connection, used to delete the row on fire.
+ * @returns { void } - Nothing, but schedules a setTimeout to fire the reminder at the right time.
  *
  */
 
@@ -18,7 +18,7 @@ function scheduleReminder( client, reminder, db ) {
     const msUntilFire = reminder.fireAt - Date.now();
 
     // Fire almost immediately if the time already passed (bot was down past fireAt) rather than dropping it silently
-    const delay = msUntilFire > 0 ? msUntilFire : 0;
+    const delay = msUntilFire > 0 ? msUntilFire : 0; // if the reminder is in the past, fire immediately
 
     const timeoutHandle = setTimeout( async () => {
 
@@ -48,8 +48,8 @@ function scheduleReminder( client, reminder, db ) {
  *
  * Cancels a scheduled reminder's in-memory timer by id.
  *
- * @param { number } reminderId
- * @returns { boolean } - true if a timer existed and was cleared.
+ * @param { number } reminderId - The ID of the reminder to cancel.
+ * @returns { boolean } - True if a timer existed and was cleared.
  *
  */
 

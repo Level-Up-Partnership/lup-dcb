@@ -1,5 +1,5 @@
-const MIN_REMINDER_MINUTES = 1;        // shortest allowed reminder - avoids instant/0-minute fires
-const MAX_REMINDER_MINUTES = 24 * 60;  // 24 hours, per Ed's call - longest allowed reminder window
+const MIN_REMINDER_MINUTES = 1; // shortest allowed reminder - avoids instant/0-minute fires
+const MAX_REMINDER_MINUTES = 24 * 60; // longest allowed reminder - avoids multi-day reminders that are likely to be forgotten
 
 // Matches one number-unit pair, e.g. "1h", "30m", "2 hours" - the g flag lets matchAll find every occurrence
 const TIME_TOKEN_REGEX = /(\d+)\s*(hours?|hrs?|h|minutes?|mins?|m)/gi;
@@ -32,8 +32,8 @@ function parseTimeToMinutes( timeString ) {
     // Loop through all matches and accumulate the total minutes
     for ( const match of matches ) {
 
-        const amount = parseInt( match[ 1 ], 10 );
-        const unit = match[ 2 ].toLowerCase();
+        const amount = parseInt( match[1], 10 );
+        const unit = match[2].toLowerCase();
 
         // Check hours
         if ( unit.startsWith( 'h' ) ) {
@@ -46,7 +46,7 @@ function parseTimeToMinutes( timeString ) {
 
         }
 
-        matchedText += match[ 0 ];
+        matchedText += match[0];
 
     }
 

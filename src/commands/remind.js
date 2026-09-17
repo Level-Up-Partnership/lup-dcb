@@ -1,6 +1,7 @@
-const db = require( '../database' ); // Import the database connection
-const { parseTimeToMinutes } = require( '../utils/timeParser' ); // Import the time parser utility
-const { scheduleReminder, cancelReminder } = require( '../reminderScheduler' ); // Import the reminder scheduler utility
+const db = require( '../database' );
+const { parseTimeToMinutes } = require( '../utils/timeParser' );
+const { scheduleReminder, cancelReminder } = require( '../reminderScheduler' );
+const { getNextAvailableId } = require( '../utils/idReuser' );
 
 
 /**
@@ -38,13 +39,16 @@ async function execute( interaction ) {
             // fireAt is a STORED absolute timestamp, not the raw duration - survives restarts
             const fireAt = Date.now() + ( parsedTime.minutes * 60 * 1000 ); // minutes to ms
 
-            const insertResult = db.prepare(
+            // Reuse the smallest available ID instead of always growing upward
+            const id = getNextAvailableId( db, 'reminders' );
 
-                'INSERT INTO reminders ( userId, message, fireAt ) VALUES ( ?, ?, ? )'
+            db.prepare(
 
-            ).run( interaction.user.id, message, fireAt );
+                'INSERT INTO reminders ( id, userId, message, fireAt ) VALUES ( ?, ?, ?, ? )'
 
-            const reminder = { id: insertResult.lastInsertRowid, userId: interaction.user.id, message, fireAt };
+            ).run( id, interaction.user.id, message, fireAt );
+
+            const reminder = { id, userId: interaction.user.id, message, fireAt };
 
             scheduleReminder( interaction.client, reminder, db );
 

@@ -1,4 +1,5 @@
 const db = require( '../database' );
+const { getNextAvailableId } = require( '../utils/idReuser' );
 
 
 /**
@@ -22,13 +23,16 @@ async function note( interaction ) {
 
             const text = interaction.options.getString( 'text' );
 
-            const insertResult = db.prepare(
+            // Reuse the smallest available ID instead of always growing upward
+            const id = getNextAvailableId( db, 'notes' );
 
-                'INSERT INTO notes ( userId, text ) VALUES ( ?, ? )'
+            db.prepare(
 
-            ).run( interaction.user.id, text );
+                'INSERT INTO notes ( id, userId, text ) VALUES ( ?, ?, ? )'
 
-            await interaction.reply( { content: `Note #${ insertResult.lastInsertRowid } saved.`, ephemeral: true } );
+            ).run( id, interaction.user.id, text );
+
+            await interaction.reply( { content: `Note #${ id } saved.`, ephemeral: true } );
             break;
 
         }
@@ -91,4 +95,8 @@ async function note( interaction ) {
 
 }
 
-module.exports = { name: 'note', execute: note };
+module.exports = {
+    
+    name: 'note', execute: note
+
+};
