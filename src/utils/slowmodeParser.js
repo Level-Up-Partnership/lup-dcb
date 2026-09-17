@@ -42,8 +42,8 @@ function parseSlowmodeDuration( durationString ) {
 
     }
 
-    const amount = parseInt( match[ 1 ], 10 );
-    const unit = match[ 2 ].toLowerCase();
+    const amount = parseInt( match[1], 10 );
+    const unit = match[2].toLowerCase();
 
     let seconds;
 
