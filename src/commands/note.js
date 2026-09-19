@@ -1,5 +1,4 @@
 const db = require( '../database' );
-const { getNextAvailableId } = require( '../utils/idReuser' );
 
 
 /**
@@ -23,16 +22,14 @@ async function note( interaction ) {
 
             const text = interaction.options.getString( 'text' );
 
-            // Reuse the smallest available ID instead of always growing upward
-            const id = getNextAvailableId( db, 'notes' );
-
+            // Real id is handled entirely by SQLite's own AUTOINCREMENT now
             db.prepare(
 
-                'INSERT INTO notes ( id, userId, text ) VALUES ( ?, ?, ? )'
+                'INSERT INTO notes ( userId, text ) VALUES ( ?, ? )'
 
-            ).run( id, interaction.user.id, text );
+            ).run( interaction.user.id, text );
 
-            await interaction.reply( { content: `Note #${ id } saved.`, ephemeral: true } );
+            await interaction.reply( { content: 'Note saved.', ephemeral: true } );
             break;
 
         }
@@ -40,11 +37,7 @@ async function note( interaction ) {
         // Handle the 'list' subcommand
         case 'list': {
 
-            const savedNotes = db.prepare(
-
-                'SELECT * FROM notes WHERE userId = ? ORDER BY id ASC'
-
-            ).all( interaction.user.id );
+            const savedNotes = getOrderedNotes( interaction.user.id );
 
             // Handle the case where the user has nothing saved
             if ( savedNotes.length === 0 ) {
@@ -54,7 +47,8 @@ async function note( interaction ) {
 
             }
 
-            const lines = savedNotes.map( ( savedNote ) => `#${ savedNote.id } - ${ savedNote.text }` );
+            // Display position is the array index + 1 - real id is never shown
+            const lines = savedNotes.map( ( savedNote, index ) => `#${ index + 1 } - ${ savedNote.text }` );
 
             await interaction.reply( { content: lines.join( '\n' ), ephemeral: true } );
             break;
@@ -64,25 +58,26 @@ async function note( interaction ) {
         // Handle the 'delete' subcommand
         case 'delete': {
 
-            const id = interaction.options.getInteger( 'id' );
+            const position = interaction.options.getInteger( 'position' );
 
-            const savedNote = db.prepare(
+            const savedNotes = getOrderedNotes( interaction.user.id );
 
-                'SELECT * FROM notes WHERE id = ? AND userId = ?'
+            // Convert the user-facing position (1-based) to an array index (0-based)
+            const index = position - 1;
 
-            ).get( id, interaction.user.id );
+            // Reject if the position doesn't land on an actual note - covers 0, negatives, and anything past the end
+            if ( index < 0 || index >= savedNotes.length ) {
 
-            // Reject if no matching note belongs to this user
-            if ( !savedNote ) {
-
-                await interaction.reply( { content: `No note with ID ${ id } found.`, ephemeral: true } );
+                await interaction.reply( { content: `No note at position ${ position }.`, ephemeral: true } );
                 return;
 
             }
 
-            db.prepare( 'DELETE FROM notes WHERE id = ?' ).run( id );
+            const targetNote = savedNotes[ index ];
 
-            await interaction.reply( { content: `Note #${ id } deleted.`, ephemeral: true } );
+            db.prepare( 'DELETE FROM notes WHERE id = ?' ).run( targetNote.id );
+
+            await interaction.reply( { content: `Note #${ position } deleted.`, ephemeral: true } );
             break;
 
         }
@@ -95,8 +90,32 @@ async function note( interaction ) {
 
 }
 
+
+/**
+ *
+ * This function fetches a user's notes ordered by their real (permanent) id.
+ * 
+ * This exact ordering is what defines display position everywhere else - list
+ *  and delete must both call this instead of querying independently, or their
+ *  position numbering could drift apart.
+ *
+ * @param { string } userId - The ID of the user whose notes are being fetched.
+ * @returns { Array } - The user's notes, oldest real id first.
+ *
+ */
+
+function getOrderedNotes( userId ) {
+
+    return db.prepare(
+
+        'SELECT * FROM notes WHERE userId = ? ORDER BY id ASC'
+
+    ).all( userId );
+
+}
+
 module.exports = {
-    
+
     name: 'note', execute: note
 
 };

@@ -87,8 +87,8 @@ const noteCommand = new SlashCommandBuilder()
             .addIntegerOption( ( option ) =>
 
                 option
-                    .setName( 'id' )
-                    .setDescription( 'The ID of the note to delete' )
+                    .setName( 'position' )
+                    .setDescription( 'The position of the note to delete, as shown in /note list' )
                     .setRequired( true )
 
             )
