@@ -1,3 +1,4 @@
+const { EmbedBuilder } = require( 'discord.js' );
 const db = require( '../database' );
 
 
@@ -48,9 +49,23 @@ async function note( interaction ) {
             }
 
             // Display position is the array index + 1 - real id is never shown
-            const lines = savedNotes.map( ( savedNote, index ) => `#${ index + 1 } - ${ savedNote.text }` );
+            const notesEmbed = new EmbedBuilder()
+            
+                .setTitle( 'Your Saved Notes' )
+                .setColor( 0x5865F2 ) // Discord's own "blurple" brand color, matching /serverinfo and /reminders
 
-            await interaction.reply( { content: lines.join( '\n' ), ephemeral: true } );
+                .addFields(
+
+                    savedNotes.map( ( savedNote, index ) => ( {
+
+                        name: `#${ index + 1 }`,
+                        value: savedNote.text
+
+                    } ) )
+
+                );
+
+            await interaction.reply( { embeds: [ notesEmbed ], ephemeral: true } );
             break;
 
         }
