@@ -1,12 +1,13 @@
-const db = require( '../database' ); // Import the database connection
+const { EmbedBuilder } = require( 'discord.js' );
+const db = require( '../database' );
 
 
 /**
- * 
- * This command is used to list the user's pending reminders.
- * 
+ *
+ * This command is used to list the user's pending reminders as a Discord embed.
+ *
  * @param { import( 'discord.js' ).ChatInputCommandInteraction } - interaction.
- * 
+ *
  */
 
 async function listReminders( interaction ) {
@@ -25,18 +26,28 @@ async function listReminders( interaction ) {
 
     }
 
-    const lines = pendingReminders.map( ( reminder ) =>
+    // One field per reminder - id stays real here, Reminders keep ID reuse, not position-based display like Notes
+    const remindersEmbed = new EmbedBuilder()
 
-        `#${ reminder.id } - ${ reminder.message } - <t:${ Math.floor( reminder.fireAt / 1000 ) }:R>`
+        .setTitle( 'Your Pending Reminders' )
+        .setColor( 0x5865F2 ) // Discord's own "blurple" brand color, matching /serverinfo
+        .addFields(
 
-    );
+            pendingReminders.map( ( reminder ) => ( {
 
-    await interaction.reply( { content: lines.join( '\n' ), ephemeral: true } );
+                name: `#${ reminder.id }`,
+                value: `${ reminder.message } - <t:${ Math.floor( reminder.fireAt / 1000 ) }:R>`
+
+            } ) )
+
+        );
+
+    await interaction.reply( { embeds: [ remindersEmbed ], ephemeral: true } );
 
 }
 
 module.exports = {
-    
+
     name: 'reminders', execute: listReminders
 
 };
