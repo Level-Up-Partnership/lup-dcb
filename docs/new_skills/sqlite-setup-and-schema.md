@@ -109,3 +109,48 @@ want to sanity check the database's structure.
 table uses `AUTOINCREMENT`, it's SQLite's own internal bookkeeping table
 for tracking the next available ID per table. Not something the project
 creates explicitly, and not something to touch directly.
+
+## Reusing IDs instead of always incrementing
+
+By default, `AUTOINCREMENT` only ever counts upward, delete row #2, and the
+next insert becomes #5 if #3 and #4 already exist, #2 is gone for good. Per
+a confirmed scope addition (Notes and Reminders both), this project instead
+fills gaps left by deleted rows: delete #2, the next save becomes #2 again.
+
+**The key insight: `AUTOINCREMENT` only activates when an ID is *omitted*
+from an `INSERT`.** If an ID is explicitly provided instead, SQLite accepts
+it as-is (as long as it's not already in use, since it's still the primary
+key), and `AUTOINCREMENT`'s own internal counter (the `sqlite_sequence`
+table) is never consulted at all. This means ID reuse needed **no schema
+change whatsoever**, `id INTEGER PRIMARY KEY AUTOINCREMENT` stays exactly as
+it was, the behavior change lives entirely in application code, not the
+table definition.
+
+**The actual query**, a classic "find the first gap" pattern:
+
+```sql
+SELECT MIN( id ) + 1 AS nextId
+FROM ( SELECT id FROM notes UNION SELECT 0 AS id )
+WHERE ( id + 1 ) NOT IN ( SELECT id FROM notes )
+```
+
+This checks every existing ID (plus a synthetic `0`, to handle an empty
+table) and returns the smallest one where "one more than this ID" isn't
+already taken. Empty table → `1`. IDs `{1, 2, 4}` → `3` (the actual gap),
+not `5`.
+
+**Why this is safe without extra locking:** `better-sqlite3` is
+synchronous, computing the next available ID and running the `INSERT` that
+uses it happen back-to-back, with nothing else able to execute in between
+(JavaScript is single-threaded, and nothing here yields control
+mid-calculation). Two saves "at the same time" can't actually interleave
+and collide on the same ID, this wouldn't hold if the driver were async.
+
+**How to apply it going forward:** any time a table needs IDs that are
+meaningful to a human (referenced in conversation, written down, etc.)
+rather than purely internal, decide up front whether gaps from deletions
+should persist or get reused. Reused IDs are friendlier for a small,
+low-volume table like this one, but they mean an old reference to "item #2"
+could later point at a completely different row once #2 gets reassigned,
+worth being aware of as a tradeoff, not just a nicety.
+
