@@ -21,9 +21,15 @@ if ( !process.env.DISCORD_TOKEN ) {
 
 }
 
+// Last-resort net: log any promise rejection nobody caught, instead of letting Node exit
+process.on( 'unhandledRejection', ( error ) => console.error( 'Unhandled promise rejection:', error ) );
+
 // Create client
 // GatewayIntentBits.Guilds is the minimum required for the bot to connect and appear online
 const client = new Client( { intents: [ GatewayIntentBits.Guilds ] } );
+
+// Log client-level errors - an 'error' event with no listener crashes the process
+client.on( Events.Error, ( error ) => console.error( 'Discord client error:', error ) );
 
 client.once( Events.ClientReady, ( readyClient ) => {
 
