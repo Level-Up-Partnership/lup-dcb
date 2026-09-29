@@ -11,6 +11,8 @@ const slowmode = require( './commands/slowmode.js' );
 const db = require( './database' ); // Import the database connection
 const { scheduleReminder } = require( './reminderScheduler' ); // Import the reminder scheduler utility
 
+const { replyWithError } = require( './utils/errorReply' ); // Import the error reply utility
+
 // Fail fast if the token is missing - a bot with no token can't do anything
 if ( !process.env.DISCORD_TOKEN ) {
 
@@ -33,9 +35,9 @@ client.once( Events.ClientReady, ( readyClient ) => {
 
     pendingReminders.forEach( ( reminder, index ) => {
 
-        /** Stagger reminders that are already overdue (fireAt in the past) so
-             multiple DMs to the same user on a single restart don't fire in the same instant. Discord's own API rejects opening a second DM channel to the same user too quickly (DiscordAPIError 40003), and this only affects the in-memory firing order for THIS run, the original fireAt stays untouched in the database, since that's the stored source of truth.
-          */
+        /* Stagger reminders that are already overdue (fireAt in the past) so
+            multiple DMs to the same user on a single restart don't fire in the same instant. Discord's own API rejects opening a second DM channel to the same user too quickly (DiscordAPIError 40003), and this only affects the in-memory firing order for THIS run, the original fireAt stays untouched in the database, since that's the stored source of truth.
+        */
         const isOverdue = reminder.fireAt <= Date.now();
         const staggeredReminder = isOverdue
 
@@ -73,7 +75,18 @@ client.on( Events.InteractionCreate, async ( interaction ) => {
     // This guards against a user using a command that doesn't exist
     if ( !command ) {
 
-        await interaction.reply( 'Command not found' );
+        // This should never happen in practice, since the bot only registers commands that exist
+        // But if a user somehow manages to invoke a command that doesn't exist, handled gracefully
+        try {
+
+            await interaction.reply( { content: 'Command not found', ephemeral: true } );
+
+        } catch ( error ) { // Catches expired interaction 
+
+            console.error( 'Could not send command-not-found reply:', error );
+
+        }
+
         return;
 
     }
@@ -83,10 +96,10 @@ client.on( Events.InteractionCreate, async ( interaction ) => {
 
         await command.execute( interaction );
 
-    } catch ( error ) { // If an error occurs, show it in the console and send a message to the user
+    } catch ( error ) { // catches any command failure - user sees an ephemeral error, bot stays online
 
         console.error( error );
-        await interaction.reply( 'There was an error while executing this command!' );
+        await replyWithError( interaction );
 
     }
 
