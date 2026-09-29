@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require( 'discord.js' );
 const db = require( '../database' );
+const { limitForDisplay } = require( '../utils/userLimits' );
 
 
 /**
@@ -26,6 +27,9 @@ async function listReminders( interaction ) {
 
     }
 
+    // Discord allows 25 fields per embed - trim defensively in case rows predate the save-time cap
+    const { shown, footerText } = limitForDisplay( pendingReminders, 'reminders' );
+
     // One field per reminder - id stays real here, Reminders keep ID reuse, not position-based display like Notes
     const remindersEmbed = new EmbedBuilder()
 
@@ -33,7 +37,7 @@ async function listReminders( interaction ) {
         .setColor( 0x5865F2 ) // Discord's own "blurple" brand color, matching /serverinfo
         .addFields(
 
-            pendingReminders.map( ( reminder ) => ( {
+            shown.map( ( reminder ) => ( {
 
                 name: `#${ reminder.id }`,
                 value: `${ reminder.message } - <t:${ Math.floor( reminder.fireAt / 1000 ) }:R>`
@@ -41,6 +45,13 @@ async function listReminders( interaction ) {
             } ) )
 
         );
+
+    // Tell the user some were left out rather than dropping them silently
+    if ( footerText ) {
+
+        remindersEmbed.setFooter( { text: footerText } );
+
+    }
 
     await interaction.reply( { embeds: [ remindersEmbed ], ephemeral: true } );
 
