@@ -4,6 +4,7 @@ const { MAX_ITEMS_PER_USER } = require( '../utils/userLimits' );
 let db;
 let reminders;
 let remind;
+let note;
 
 beforeEach( () => {
 
@@ -22,6 +23,7 @@ beforeEach( () => {
 
     reminders = require( '../commands/reminders' );
     remind = require( '../commands/remind' );
+    note = require( '../commands/note' );
 
 } );
 
@@ -113,6 +115,34 @@ test( '/remind set is rejected at the cap and saves nothing', async () => {
     await remind.execute( interaction );
 
     const { count } = db.prepare( 'SELECT COUNT( * ) AS count FROM reminders' ).get();
+
+    expect( interaction.reply.mock.calls[0][0].content ).toContain( 'at most' );
+    expect( count ).toBe( MAX_ITEMS_PER_USER );
+
+} );
+
+test( '/note list shows 25 with a footer when 26 exist', async () => {
+
+    insertRows( 'notes', MAX_ITEMS_PER_USER + 1 );
+
+    const interaction = fakeInteraction( { subcommand: 'list' } );
+    await note.execute( interaction );
+
+    const embed = interaction.reply.mock.calls[0][0].embeds[0].data;
+
+    expect( embed.fields ).toHaveLength( MAX_ITEMS_PER_USER );
+    expect( embed.footer.text ).toContain( `${ MAX_ITEMS_PER_USER + 1 }` );
+
+} );
+
+test( '/note save is rejected at the cap and saves nothing', async () => {
+
+    insertRows( 'notes', MAX_ITEMS_PER_USER );
+
+    const interaction = fakeInteraction( { subcommand: 'save', strings: { text: 'one too many' } } );
+    await note.execute( interaction );
+
+    const { count } = db.prepare( 'SELECT COUNT( * ) AS count FROM notes' ).get();
 
     expect( interaction.reply.mock.calls[0][0].content ).toContain( 'at most' );
     expect( count ).toBe( MAX_ITEMS_PER_USER );
