@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { MAX_TEXT_LENGTH } = require( '../utils/userLimits' );
 
 
 // /remind - has two subcommands, since Discord can't mix flat options with subcommands
@@ -18,6 +19,7 @@ const remindCommand = new SlashCommandBuilder()
                     .setName( 'time' )
                     .setDescription( 'How long from now, e.g., 10 minutes, 1 hour' )
                     .setRequired( true )
+                    .setMaxLength( MAX_TEXT_LENGTH )
 
             )
             .addStringOption( ( option ) =>
@@ -26,6 +28,7 @@ const remindCommand = new SlashCommandBuilder()
                     .setName( 'message' )
                     .setDescription( 'What to remind you of' )
                     .setRequired( true )
+                    .setMaxLength( MAX_TEXT_LENGTH )
 
             )
 
@@ -68,6 +71,7 @@ const noteCommand = new SlashCommandBuilder()
                     .setName( 'text' )
                     .setDescription( 'The text of the note' )
                     .setRequired( true )
+                    .setMaxLength( MAX_TEXT_LENGTH )
 
             )
         )

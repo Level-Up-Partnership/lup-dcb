@@ -41,6 +41,6 @@ function getNextAvailableId( db, tableName ) {
 
 module.exports = {
     
-    getNextAvailableId
+    getNextAvailableId, ALLOWED_TABLES
 
 };

@@ -3,6 +3,9 @@ const { parseTimeToMinutes } = require( '../utils/timeParser' );
 const { scheduleReminder, cancelReminder } = require( '../reminderScheduler' );
 const { getNextAvailableId } = require( '../utils/idReuser' );
 
+const { MessageFlags } = require( 'discord.js' );
+const { hasReachedLimit, MAX_ITEMS_PER_USER } = require( '../utils/userLimits' );
+
 
 /**
  * 
@@ -32,6 +35,19 @@ async function execute( interaction ) {
             if ( !parsedTime.valid ) {
 
                 await interaction.reply( { content: parsedTime.error, ephemeral: true } );
+                return;
+
+            }
+
+            // Reject once the user hits the cap - /reminders can only display this many in one embed
+            if ( hasReachedLimit( db, 'reminders', interaction.user.id ) ) {
+
+                await interaction.reply( {
+
+                    content: `You can have at most ${ MAX_ITEMS_PER_USER } pending reminders. Cancel one with /remind cancel first.`,
+                    flags: MessageFlags.Ephemeral
+
+                } );
                 return;
 
             }

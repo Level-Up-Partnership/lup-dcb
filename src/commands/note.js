@@ -1,5 +1,6 @@
-const { EmbedBuilder } = require( 'discord.js' );
+const { EmbedBuilder, MessageFlags } = require( 'discord.js' );
 const db = require( '../database' );
+const { hasReachedLimit, limitForDisplay, MAX_ITEMS_PER_USER } = require( '../utils/userLimits' );
 
 
 /**
@@ -20,6 +21,19 @@ async function note( interaction ) {
 
         // Handle the 'save' subcommand
         case 'save': {
+
+            // Reject once the user hits the cap - /note list can only display this many in one embed
+            if ( hasReachedLimit( db, 'notes', interaction.user.id ) ) {
+
+                await interaction.reply( {
+
+                    content: `You can have at most ${ MAX_ITEMS_PER_USER } saved notes. Delete one with /note delete first.`,
+                    flags: MessageFlags.Ephemeral
+
+                } );
+                return;
+
+            }
 
             const text = interaction.options.getString( 'text' );
 
@@ -48,15 +62,17 @@ async function note( interaction ) {
 
             }
 
+                        // Discord allows 25 fields per embed - trim defensively in case rows predate the save-time cap
+            const { shown, footerText } = limitForDisplay( savedNotes, 'notes' );
+
             // Display position is the array index + 1 - real id is never shown
             const notesEmbed = new EmbedBuilder()
-            
+
                 .setTitle( 'Your Saved Notes' )
                 .setColor( 0x5865F2 ) // Discord's own "blurple" brand color, matching /serverinfo and /reminders
-
                 .addFields(
 
-                    savedNotes.map( ( savedNote, index ) => ( {
+                    shown.map( ( savedNote, index ) => ( {
 
                         name: `#${ index + 1 }`,
                         value: savedNote.text
@@ -64,6 +80,13 @@ async function note( interaction ) {
                     } ) )
 
                 );
+
+            // Tell the user some were left out rather than dropping them silently
+            if ( footerText ) {
+
+                notesEmbed.setFooter( { text: footerText } );
+
+            }
 
             await interaction.reply( { embeds: [ notesEmbed ], ephemeral: true } );
             break;
